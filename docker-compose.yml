@@ -1,0 +1,63 @@
+version: '3.0'
+services:
+  db_rewards:
+    image: postgres:latest
+    restart: always
+    ports:
+      - 5432:5432
+    volumes:
+      - ./data/rewards-mvp:/var/lib/postgresql/data 
+    env_file:
+      - ./rewards-mvp/.env
+    networks:
+      - rewards-mvp
+
+  db_gateway:
+    image: postgres:latest
+    restart: always
+    ports:
+      - 5433:5432
+    volumes:
+      - ./data/api-gateway:/var/lib/postgresql/data 
+    env_file:
+      - ./api-gateway/.env
+    networks:
+      - rewards-mvp
+
+  api-gateway:
+    build:
+      context: ./api-gateway
+      dockerfile: Dockerfile
+    container_name: api-gateway
+    command: flask run --host 0.0.0.0
+    volumes:
+      - ./api-gateway:/app
+    depends_on:
+      - db_gateway
+    env_file:
+      - ./api-gateway/.env
+    ports:
+      - 5001:5000
+    networks:
+      - rewards-mvp
+  
+  rewards:
+    build:
+      context: ./rewards-mvp
+      dockerfile: Dockerfile
+    container_name: rewards
+    command: flask run --host 0.0.0.0
+    volumes:
+      - ./rewards-mvp:/app
+    depends_on:
+      - db_rewards
+    env_file:
+      - ./rewards-mvp/.env
+    ports:
+      - 5002:5000
+    networks:
+      - rewards-mvp
+
+networks:
+  rewards-mvp:
+    driver: bridge
